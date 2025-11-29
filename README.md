@@ -1,12 +1,16 @@
 # cli-t
 
-A minimal real-time CLI chat application in Rust with room-based messaging, nicknames, and commands.
+A minimal real-time CLI chat application built with Rust. Create rooms, invite friends, and chat from your terminal.
 
-## Installation
+## Features
 
-### Quick Install (Recommended)
+- **Room-based chat** - Create and join chat rooms with unique IDs
+- **Custom nicknames** - Choose your own or get a random one
+- **Real-time messaging** - Instant message delivery
+- **Simple commands** - Easy-to-use CLI interface
+- **Lightweight** - Fast and minimal dependencies
 
-Install with a single command:
+## Quick Install
 
 **Linux/macOS:**
 ```bash
@@ -18,58 +22,58 @@ curl -fsSL https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.sh | ba
 irm https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.ps1 | iex
 ```
 
-After installation, restart your terminal and run `cli-t` to start chatting!
+After installation, restart your terminal and you're ready to go!
 
-### From crates.io
-
-If published to crates.io, users can install with:
-
-```bash
-# Install server
-cargo install cli-t-server
-
-# Install client
-cargo install cli-t
-```
-
-The binaries will be available in `~/.cargo/bin/` (or `%USERPROFILE%\.cargo\bin` on Windows).
+## Manual Installation
 
 ### From Source
 
 ```bash
-# Clone the repository
 git clone https://github.com/Nuu-maan/cli-t.git
 cd cli-t
 
-# Install both components
+# Build and install
 cargo install --path server
 cargo install --path client
 ```
 
-### Manual Installation
+### Pre-built Binaries
 
-Download pre-built binaries from [GitHub Releases](https://github.com/Nuu-maan/cli-t/releases) and add them to your PATH.
+Download binaries from [GitHub Releases](https://github.com/Nuu-maan/cli-t/releases) and add them to your PATH.
 
 ## Quick Start
 
-1. **Start the server** (in one terminal):
+1. **Start the server:**
    ```bash
    cli-t-server
    ```
-   The server listens on `127.0.0.1:8080` by default.
+   Server listens on `127.0.0.1:8080` by default.
 
-2. **Start clients** (in additional terminals):
+2. **Start a client:**
    ```bash
    cli-t
    ```
 
-3. **Follow the prompts**:
-   - Enter a nickname (or leave blank for random)
-   - Use `/create` to create a room
-   - Use `/join <room-id>` to join an existing room
-   - Type messages to chat
-   - Use `/quit` to leave a room
-   - Use `/help` to see all commands
+3. **Create or join a room:**
+   ```
+   > /create
+   Room created: room-abc12
+   Share this ID with others to join.
+   
+   > /join room-abc12
+   Joined room: room-abc12
+   ```
+
+4. **Start chatting!**
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `/create` | Create a new room and get a room ID |
+| `/join <id>` | Join an existing room by ID |
+| `/quit` | Leave the current room |
+| `/help` | Show available commands |
 
 ## Usage Example
 
@@ -78,9 +82,9 @@ $ cli-t
 
 Welcome to cli-t!
 
-Nick (leave blank for random): coolguy
+Nick (leave blank for random): alice
 
-You are: coolguy
+You are: alice
 
 Commands:
   /create       - Create a new room
@@ -89,63 +93,70 @@ Commands:
   /help         - Show commands
 
 > /create
-Room created: room-x7k9p
+Room created: room-xyz42
 Share this ID with others to join.
 
-[coolguy joined]
-
-> hey what's up
+[bob joined]
+bob: Hey everyone!
+alice: Hi bob!
 
 > /quit
 Left the room.
-
->
 ```
 
-## Commands
+## Custom Server Address
 
-- `/create` - Create a new room and get a room ID
-- `/join <id>` - Join an existing room by ID
-- `/quit` - Leave the current room
-- `/help` - Show available commands
+Both server and client accept a command-line argument for the address:
 
-## Features
+```bash
+# Server: bind to specific address
+cli-t-server 0.0.0.0:8080
 
-- Room-based chat system
-- Custom nicknames (or random if left blank)
-- Real-time message broadcasting within rooms
-- Multiple concurrent clients
-- Simple text-based protocol
-- Async I/O with Tokio
-- Graceful disconnection handling
-
-## Project Structure
-
-```
-cli-t/
-├── Cargo.toml          # Workspace configuration
-├── server/             # Server project
-│   ├── Cargo.toml
-│   └── src/
-│       └── main.rs
-└── client/             # Client project
-    ├── Cargo.toml
-    └── src/
-        └── main.rs
+# Client: connect to specific server
+cli-t example.com:8080
 ```
 
-## Publishing to crates.io
+## Contributing
 
-To publish to crates.io:
+Contributions are welcome! Whether it's:
 
-1. Create accounts on [crates.io](https://crates.io) and get an API token
-2. Repository URLs are already set in `server/Cargo.toml` and `client/Cargo.toml`
-3. Publish:
-   ```bash
-   cd server && cargo publish
-   cd ../client && cargo publish
-   ```
+- Bug fixes
+- New features
+- Documentation improvements
+- UI/UX enhancements
+- Performance optimizations
+
+### How to Contribute
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Setup
+
+```bash
+git clone https://github.com/Nuu-maan/cli-t.git
+cd cli-t
+
+# Run server
+cd server && cargo run
+
+# Run client (in another terminal)
+cd client && cargo run
+```
+
+Feel free to open an issue if you have questions or suggestions!
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+Built with Rust and Tokio.
+
+---
+
+**Made with care for the terminal community**
