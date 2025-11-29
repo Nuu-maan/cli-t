@@ -5,20 +5,15 @@ $ErrorActionPreference = "Stop"
 Write-Host "Installing cli-t..." -ForegroundColor Green
 Write-Host ""
 
-# Detect architecture
-$Arch = if ([Environment]::Is64BitOperatingSystem) { "x86_64" } else { "i686" }
-$Target = "x86_64-pc-windows-msvc"
+# Check if Rust is installed
+if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+    Write-Host "Error: Rust/Cargo is not installed." -ForegroundColor Red
+    Write-Host "Please install Rust from https://rustup.rs/ first." -ForegroundColor Yellow
+    exit 1
+}
 
 # GitHub repository
 $Repo = "Nuu-maan/cli-t"
-$Version = "latest"
-
-# Determine download URL
-if ($Version -eq "latest") {
-    $Url = "https://github.com/$Repo/releases/latest/download/cli-t-$Target.zip"
-} else {
-    $Url = "https://github.com/$Repo/releases/download/$Version/cli-t-$Target.zip"
-}
 
 # Create temp directory
 $TempDir = Join-Path $env:TEMP "cli-t-install"
@@ -28,19 +23,35 @@ if (Test-Path $TempDir) {
 New-Item -ItemType Directory -Path $TempDir | Out-Null
 
 try {
-    Write-Host "Downloading cli-t for $Target..." -ForegroundColor Yellow
-    $ZipPath = Join-Path $TempDir "cli-t.zip"
+    Write-Host "Building cli-t from source..." -ForegroundColor Yellow
     
-    try {
-        Invoke-WebRequest -Uri $Url -OutFile $ZipPath -UseBasicParsing
-    } catch {
-        Write-Host "Failed to download. Make sure the release exists on GitHub." -ForegroundColor Red
+    # Clone repository
+    Write-Host "Cloning repository..." -ForegroundColor Yellow
+    $RepoDir = Join-Path $TempDir "cli-t"
+    git clone --depth 1 "https://github.com/$Repo.git" $RepoDir
+    
+    if (-not $?) {
+        Write-Host "Failed to clone repository." -ForegroundColor Red
         exit 1
     }
     
-    # Extract
-    Write-Host "Extracting..." -ForegroundColor Yellow
-    Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
+    # Build
+    Write-Host "Building client (this may take a few minutes)..." -ForegroundColor Yellow
+    Push-Location (Join-Path $RepoDir "client")
+    cargo build --release
+    
+    if (-not $?) {
+        Write-Host "Build failed." -ForegroundColor Red
+        exit 1
+    }
+    
+    $BinaryPath = Join-Path $RepoDir "target\release\cli-t.exe"
+    if (-not (Test-Path $BinaryPath)) {
+        Write-Host "Binary not found after build." -ForegroundColor Red
+        exit 1
+    }
+    
+    Pop-Location
     
     # Determine install directory
     $LocalBin = Join-Path $env:USERPROFILE ".local\bin"
@@ -50,19 +61,7 @@ try {
     
     # Install binary
     Write-Host "Installing to $LocalBin..." -ForegroundColor Yellow
-    $BinaryPath = Join-Path $TempDir "cli-t.exe"
-    if (Test-Path $BinaryPath) {
-        Copy-Item $BinaryPath $LocalBin -Force
-    } else {
-        # Try alternative name
-        $AltPath = Get-ChildItem $TempDir -Filter "*.exe" | Select-Object -First 1
-        if ($AltPath) {
-            Copy-Item $AltPath.FullName (Join-Path $LocalBin "cli-t.exe") -Force
-        } else {
-            Write-Host "Binary not found in archive" -ForegroundColor Red
-            exit 1
-        }
-    }
+    Copy-Item $BinaryPath (Join-Path $LocalBin "cli-t.exe") -Force
     
     # Add to PATH if not already there
     $CurrentPath = [Environment]::GetEnvironmentVariable("Path", "User")
@@ -83,4 +82,3 @@ try {
         Remove-Item $TempDir -Recurse -Force
     }
 }
-

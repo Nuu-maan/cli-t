@@ -9,6 +9,14 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}Installing cli-t...${NC}\n"
 
+# Check if Rust is installed
+if ! command -v cargo &> /dev/null; then
+    echo -e "${RED}Error: Rust/Cargo is not installed.${NC}"
+    echo -e "${YELLOW}Please install Rust from https://rustup.rs/ first.${NC}"
+    echo -e "${YELLOW}Or wait for pre-built releases to be available.${NC}"
+    exit 1
+fi
+
 # Detect OS and architecture
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -20,51 +28,37 @@ case "$ARCH" in
     *) echo -e "${RED}Unsupported architecture: $ARCH${NC}"; exit 1 ;;
 esac
 
-# Map OS to target triple
-case "$OS" in
-    Linux*) 
-        TARGET="x86_64-unknown-linux-gnu"
-        BINARY_NAME="cli-t"
-        ;;
-    Darwin*)
-        if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
-            TARGET="aarch64-apple-darwin"
-        else
-            TARGET="x86_64-apple-darwin"
-        fi
-        BINARY_NAME="cli-t"
-        ;;
-    *)
-        echo -e "${RED}Unsupported OS: $OS${NC}"
-        echo "For Windows, please use install.ps1"
-        exit 1
-        ;;
-esac
-
 # GitHub repository
 REPO="Nuu-maan/cli-t"
-VERSION="latest"
-
-# Determine download URL
-if [ "$VERSION" = "latest" ]; then
-    URL="https://github.com/${REPO}/releases/latest/download/cli-t-${TARGET}.tar.gz"
-else
-    URL="https://github.com/${REPO}/releases/download/${VERSION}/cli-t-${TARGET}.tar.gz"
-fi
 
 # Create temp directory
 TMP_DIR=$(mktemp -d)
 trap "rm -rf $TMP_DIR" EXIT
 
-echo -e "${YELLOW}Downloading cli-t for ${TARGET}...${NC}"
-if ! curl -fsSL "$URL" -o "$TMP_DIR/cli-t.tar.gz"; then
-    echo -e "${RED}Failed to download. Make sure the release exists on GitHub.${NC}"
+echo -e "${YELLOW}Building cli-t from source...${NC}"
+
+# Clone repository
+echo -e "${YELLOW}Cloning repository...${NC}"
+cd "$TMP_DIR"
+git clone --depth 1 https://github.com/${REPO}.git cli-t-src || {
+    echo -e "${RED}Failed to clone repository.${NC}"
+    exit 1
+}
+
+cd cli-t-src/client
+
+# Build
+echo -e "${YELLOW}Building client (this may take a few minutes)...${NC}"
+cargo build --release || {
+    echo -e "${RED}Build failed.${NC}"
+    exit 1
+}
+
+BINARY_PATH="$TMP_DIR/cli-t-src/target/release/cli-t"
+if [ ! -f "$BINARY_PATH" ]; then
+    echo -e "${RED}Binary not found after build.${NC}"
     exit 1
 fi
-
-# Extract
-echo -e "${YELLOW}Extracting...${NC}"
-tar -xzf "$TMP_DIR/cli-t.tar.gz" -C "$TMP_DIR"
 
 # Determine install directory
 if [ -d "$HOME/.local/bin" ]; then
@@ -78,8 +72,8 @@ fi
 
 # Install binary
 echo -e "${YELLOW}Installing to ${INSTALL_DIR}...${NC}"
-chmod +x "$TMP_DIR/$BINARY_NAME"
-mv "$TMP_DIR/$BINARY_NAME" "$INSTALL_DIR/cli-t"
+chmod +x "$BINARY_PATH"
+cp "$BINARY_PATH" "$INSTALL_DIR/cli-t"
 
 # Add to PATH if not already there
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
@@ -103,4 +97,3 @@ fi
 
 echo -e "\n${GREEN}✓ cli-t installed successfully!${NC}"
 echo -e "${GREEN}Run 'cli-t' to start chatting${NC}\n"
-

@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.sh | ba
 irm https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.ps1 | iex
 ```
 
-After installation, restart your terminal and you're ready to go!
+The install script will build cli-t from source (requires Rust). After installation, restart your terminal and you're ready to go!
 
 ## Manual Installation
 
