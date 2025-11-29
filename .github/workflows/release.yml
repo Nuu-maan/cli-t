@@ -1,0 +1,78 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+            binary: cli-t.exe
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: tar.gz
+            binary: cli-t
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+            binary: cli-t
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+            binary: cli-t
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build client
+        run: |
+          cd client
+          cargo build --release --target ${{ matrix.target }}
+
+      - name: Create archive
+        shell: bash
+        run: |
+          cd client/target/${{ matrix.target }}/release
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            zip ../../../../../cli-t-${{ matrix.target }}.zip ${{ matrix.binary }}
+          else
+            tar -czf ../../../../../cli-t-${{ matrix.target }}.tar.gz ${{ matrix.binary }}
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-t-${{ matrix.target }}
+          path: cli-t-${{ matrix.target }}.*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
