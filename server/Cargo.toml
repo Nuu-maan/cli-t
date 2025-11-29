@@ -1,0 +1,20 @@
+[package]
+name = "cli-t-server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Server component for cli-t - a minimal real-time CLI chat application"
+repository = "https://github.com/Nuu-maan/cli-t"
+keywords = ["chat", "cli", "server", "tcp", "realtime"]
+categories = ["command-line-utilities", "network-programming"]
+
+[[bin]]
+name = "cli-t-server"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1.35", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
