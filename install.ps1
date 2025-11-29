@@ -5,53 +5,82 @@ $ErrorActionPreference = "Stop"
 Write-Host "Installing cli-t..." -ForegroundColor Green
 Write-Host ""
 
-# Check if Rust is installed
-if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
-    Write-Host "Error: Rust/Cargo is not installed." -ForegroundColor Red
-    Write-Host "Please install Rust from https://rustup.rs/ first." -ForegroundColor Yellow
-    exit 1
-}
-
 # GitHub repository
 $Repo = "Nuu-maan/cli-t"
+$Target = "x86_64-pc-windows-msvc"
 
-# Create temp directory
+# Try to download from releases first
+$ReleaseUrl = "https://github.com/$Repo/releases/latest/download/cli-t-$Target.zip"
 $TempDir = Join-Path $env:TEMP "cli-t-install"
 if (Test-Path $TempDir) {
     Remove-Item $TempDir -Recurse -Force
 }
 New-Item -ItemType Directory -Path $TempDir | Out-Null
 
+$ZipPath = Join-Path $TempDir "cli-t.zip"
+
 try {
-    Write-Host "Building cli-t from source..." -ForegroundColor Yellow
+    Write-Host "Checking for pre-built release..." -ForegroundColor Yellow
     
-    # Clone repository
-    Write-Host "Cloning repository..." -ForegroundColor Yellow
-    $RepoDir = Join-Path $TempDir "cli-t"
-    git clone --depth 1 "https://github.com/$Repo.git" $RepoDir
-    
-    if (-not $?) {
-        Write-Host "Failed to clone repository." -ForegroundColor Red
-        exit 1
+    try {
+        Invoke-WebRequest -Uri $ReleaseUrl -OutFile $ZipPath -UseBasicParsing -ErrorAction Stop
+        Write-Host "Downloading pre-built binary..." -ForegroundColor Green
+        
+        # Extract
+        Write-Host "Extracting..." -ForegroundColor Yellow
+        Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
+        
+        $BinaryPath = Join-Path $TempDir "cli-t.exe"
+        if (-not (Test-Path $BinaryPath)) {
+            # Try alternative name
+            $AltPath = Get-ChildItem $TempDir -Filter "*.exe" | Select-Object -First 1
+            if ($AltPath) {
+                $BinaryPath = $AltPath.FullName
+            } else {
+                throw "Binary not found in archive"
+            }
+        }
+        
+        Write-Host "Pre-built binary downloaded successfully!" -ForegroundColor Green
+        
+    } catch {
+        Write-Host "No pre-built release found. Building from source..." -ForegroundColor Yellow
+        
+        # Check if Rust is installed
+        if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+            Write-Host "Error: Rust/Cargo is not installed." -ForegroundColor Red
+            Write-Host "Please install Rust from https://rustup.rs/ first." -ForegroundColor Yellow
+            Write-Host "Or wait for a pre-built release to be available." -ForegroundColor Yellow
+            exit 1
+        }
+        
+        # Clone and build
+        Write-Host "Cloning repository..." -ForegroundColor Yellow
+        $RepoDir = Join-Path $TempDir "cli-t"
+        git clone --depth 1 "https://github.com/$Repo.git" $RepoDir
+        
+        if (-not $?) {
+            Write-Host "Failed to clone repository." -ForegroundColor Red
+            exit 1
+        }
+        
+        Write-Host "Building client (this may take a few minutes)..." -ForegroundColor Yellow
+        Push-Location (Join-Path $RepoDir "client")
+        cargo build --release
+        
+        if (-not $?) {
+            Write-Host "Build failed." -ForegroundColor Red
+            exit 1
+        }
+        
+        $BinaryPath = Join-Path $RepoDir "target\release\cli-t.exe"
+        if (-not (Test-Path $BinaryPath)) {
+            Write-Host "Binary not found after build." -ForegroundColor Red
+            exit 1
+        }
+        
+        Pop-Location
     }
-    
-    # Build
-    Write-Host "Building client (this may take a few minutes)..." -ForegroundColor Yellow
-    Push-Location (Join-Path $RepoDir "client")
-    cargo build --release
-    
-    if (-not $?) {
-        Write-Host "Build failed." -ForegroundColor Red
-        exit 1
-    }
-    
-    $BinaryPath = Join-Path $RepoDir "target\release\cli-t.exe"
-    if (-not (Test-Path $BinaryPath)) {
-        Write-Host "Binary not found after build." -ForegroundColor Red
-        exit 1
-    }
-    
-    Pop-Location
     
     # Determine install directory
     $LocalBin = Join-Path $env:USERPROFILE ".local\bin"
@@ -76,9 +105,12 @@ try {
     Write-Host "Run 'cli-t' to start chatting" -ForegroundColor Green
     Write-Host ""
     
+} catch {
+    Write-Host "Error: $_" -ForegroundColor Red
+    exit 1
 } finally {
     # Cleanup
     if (Test-Path $TempDir) {
-        Remove-Item $TempDir -Recurse -Force
+        Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }

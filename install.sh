@@ -9,14 +9,6 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}Installing cli-t...${NC}\n"
 
-# Check if Rust is installed
-if ! command -v cargo &> /dev/null; then
-    echo -e "${RED}Error: Rust/Cargo is not installed.${NC}"
-    echo -e "${YELLOW}Please install Rust from https://rustup.rs/ first.${NC}"
-    echo -e "${YELLOW}Or wait for pre-built releases to be available.${NC}"
-    exit 1
-fi
-
 # Detect OS and architecture
 OS="$(uname -s)"
 ARCH="$(uname -m)"
@@ -28,6 +20,27 @@ case "$ARCH" in
     *) echo -e "${RED}Unsupported architecture: $ARCH${NC}"; exit 1 ;;
 esac
 
+# Map OS to target triple
+case "$OS" in
+    Linux*) 
+        TARGET="x86_64-unknown-linux-gnu"
+        BINARY_NAME="cli-t"
+        ;;
+    Darwin*)
+        if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+            TARGET="aarch64-apple-darwin"
+        else
+            TARGET="x86_64-apple-darwin"
+        fi
+        BINARY_NAME="cli-t"
+        ;;
+    *)
+        echo -e "${RED}Unsupported OS: $OS${NC}"
+        echo "For Windows, please use install.ps1"
+        exit 1
+        ;;
+esac
+
 # GitHub repository
 REPO="Nuu-maan/cli-t"
 
@@ -35,29 +48,58 @@ REPO="Nuu-maan/cli-t"
 TMP_DIR=$(mktemp -d)
 trap "rm -rf $TMP_DIR" EXIT
 
-echo -e "${YELLOW}Building cli-t from source...${NC}"
+# Try to download from releases first
+RELEASE_URL="https://github.com/${REPO}/releases/latest/download/cli-t-${TARGET}.tar.gz"
 
-# Clone repository
-echo -e "${YELLOW}Cloning repository...${NC}"
-cd "$TMP_DIR"
-git clone --depth 1 https://github.com/${REPO}.git cli-t-src || {
-    echo -e "${RED}Failed to clone repository.${NC}"
-    exit 1
-}
+echo -e "${YELLOW}Checking for pre-built release...${NC}"
 
-cd cli-t-src/client
-
-# Build
-echo -e "${YELLOW}Building client (this may take a few minutes)...${NC}"
-cargo build --release || {
-    echo -e "${RED}Build failed.${NC}"
-    exit 1
-}
-
-BINARY_PATH="$TMP_DIR/cli-t-src/target/release/cli-t"
-if [ ! -f "$BINARY_PATH" ]; then
-    echo -e "${RED}Binary not found after build.${NC}"
-    exit 1
+if curl -fsSL "$RELEASE_URL" -o "$TMP_DIR/cli-t.tar.gz" 2>/dev/null; then
+    echo -e "${GREEN}Downloading pre-built binary...${NC}"
+    
+    # Extract
+    echo -e "${YELLOW}Extracting...${NC}"
+    tar -xzf "$TMP_DIR/cli-t.tar.gz" -C "$TMP_DIR"
+    
+    BINARY_PATH="$TMP_DIR/$BINARY_NAME"
+    if [ ! -f "$BINARY_PATH" ]; then
+        echo -e "${RED}Binary not found in archive${NC}"
+        exit 1
+    fi
+    
+    echo -e "${GREEN}Pre-built binary downloaded successfully!${NC}"
+else
+    echo -e "${YELLOW}No pre-built release found. Building from source...${NC}"
+    
+    # Check if Rust is installed
+    if ! command -v cargo &> /dev/null; then
+        echo -e "${RED}Error: Rust/Cargo is not installed.${NC}"
+        echo -e "${YELLOW}Please install Rust from https://rustup.rs/ first.${NC}"
+        echo -e "${YELLOW}Or wait for a pre-built release to be available.${NC}"
+        exit 1
+    fi
+    
+    # Clone repository
+    echo -e "${YELLOW}Cloning repository...${NC}"
+    cd "$TMP_DIR"
+    git clone --depth 1 https://github.com/${REPO}.git cli-t-src || {
+        echo -e "${RED}Failed to clone repository.${NC}"
+        exit 1
+    }
+    
+    cd cli-t-src/client
+    
+    # Build
+    echo -e "${YELLOW}Building client (this may take a few minutes)...${NC}"
+    cargo build --release || {
+        echo -e "${RED}Build failed.${NC}"
+        exit 1
+    }
+    
+    BINARY_PATH="$TMP_DIR/cli-t-src/target/release/$BINARY_NAME"
+    if [ ! -f "$BINARY_PATH" ]; then
+        echo -e "${RED}Binary not found after build.${NC}"
+        exit 1
+    fi
 fi
 
 # Determine install directory
