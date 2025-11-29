@@ -4,7 +4,23 @@ A minimal real-time CLI chat application in Rust with room-based messaging, nick
 
 ## Installation
 
-### From crates.io (Recommended)
+### Quick Install (Recommended)
+
+Install with a single command:
+
+**Linux/macOS:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.ps1 | iex
+```
+
+After installation, restart your terminal and run `cli-t` to start chatting!
+
+### From crates.io
 
 If published to crates.io, users can install with:
 
@@ -30,7 +46,7 @@ cargo install --path server
 cargo install --path client
 ```
 
-### Pre-built Binaries (Alternative)
+### Manual Installation
 
 Download pre-built binaries from [GitHub Releases](https://github.com/Nuu-maan/cli-t/releases) and add them to your PATH.
 
@@ -102,37 +118,6 @@ Left the room.
 - Simple text-based protocol
 - Async I/O with Tokio
 - Graceful disconnection handling
-
-## Development
-
-### Building from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/Nuu-maan/cli-t.git
-cd cli-t
-
-# Build both projects
-cargo build --release
-
-# Run server
-cd server && cargo run
-
-# Run client (in another terminal)
-cd client && cargo run [server-address]
-```
-
-### Custom Server Address
-
-Both server and client accept a command-line argument for the address:
-
-```bash
-# Server: bind to specific address
-cargo run -- 0.0.0.0:8080
-
-# Client: connect to specific server
-cargo run -- example.com:8080
-```
 
 ## Project Structure
 
