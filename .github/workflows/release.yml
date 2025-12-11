@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - target: x86_64-pc-windows-msvc
@@ -39,21 +40,22 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install target
+        run: rustup target add ${{ matrix.target }}
+
       - name: Build client
-        run: |
-          cd client
-          cargo build --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }} --package cli-t
 
       - name: Create archive
         shell: bash
         run: |
-          cd client/target/${{ matrix.target }}/release
+          cd target/${{ matrix.target }}/release
           if [ "${{ matrix.archive }}" = "zip" ]; then
-            zip ../../../../../${{ matrix.archive_name }} ${{ matrix.binary }}
+            zip ../../../${{ matrix.archive_name }} ${{ matrix.binary }}
           else
-            tar -czf ../../../../../${{ matrix.archive_name }} ${{ matrix.binary }}
+            tar -czf ../../../${{ matrix.archive_name }} ${{ matrix.binary }}
           fi
-          ls -lh ../../../../../${{ matrix.archive_name }}
+          ls -lh ../../../${{ matrix.archive_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -72,19 +74,16 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          merge-multiple: true
 
       - name: List downloaded files
         run: |
-          find artifacts -type f
+          find artifacts -type f || ls -la artifacts
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            artifacts/cli-t-x86_64-pc-windows-msvc.zip
-            artifacts/cli-t-x86_64-unknown-linux-gnu.tar.gz
-            artifacts/cli-t-x86_64-apple-darwin.tar.gz
-            artifacts/cli-t-aarch64-apple-darwin.tar.gz
+          files: artifacts/*
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           draft: false

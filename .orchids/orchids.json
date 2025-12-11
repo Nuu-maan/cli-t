@@ -1,0 +1,8 @@
+{
+  "projectId": "77f09c8c-18cc-4d6c-aa5d-f8117d0b8983",
+  "createdAt": 1765432935406,
+  "startupCommands": [
+    "cd C:\\tools\\backup\\Projects\\cli-t && cargo run --bin cli-t-server",
+    "cd C:\\tools\\backup\\Projects\\cli-t && cargo run --bin cli-t"
+  ]
+}

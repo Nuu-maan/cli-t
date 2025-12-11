@@ -15,6 +15,7 @@ Cargo.lock
 Thumbs.db
 
 # Build artifacts
+.orchids.json
 *.exe
 *.pdb
 *.d
