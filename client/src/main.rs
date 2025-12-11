@@ -8,7 +8,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get server address from command line or use default
     let addr = std::env::args()
         .nth(1)
-        .unwrap_or_else(|| "127.0.0.1:8080".to_string());
+        .unwrap_or_else(|| "148.251.71.9:1111".to_string());
     
     // Welcome message
     println!("Welcome to cli-t!\n");
