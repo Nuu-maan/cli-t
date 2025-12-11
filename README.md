@@ -36,7 +36,7 @@ Download binaries for your platform from [GitHub Releases](https://github.com/Nu
 
 | Platform | Download |
 |----------|----------|
-| Windows (x64) | [cli-t-x86_64-pc-windows-msvc.zip](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-x86_64-pc-windows-msvc.zip) |
+| Windows (x64) | [cli-t-x86_64-pc-windows-msvc.tar.gz](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-x86_64-pc-windows-msvc.tar.gz) |
 | Linux (x64) | [cli-t-x86_64-unknown-linux-gnu.tar.gz](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-x86_64-unknown-linux-gnu.tar.gz) |
 | Linux (ARM64) | [cli-t-aarch64-unknown-linux-gnu.tar.gz](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-aarch64-unknown-linux-gnu.tar.gz) |
 | macOS (Intel) | [cli-t-x86_64-apple-darwin.tar.gz](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-x86_64-apple-darwin.tar.gz) |

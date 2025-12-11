@@ -10,35 +10,47 @@ $Repo = "Nuu-maan/cli-t"
 $Target = "x86_64-pc-windows-msvc"
 
 # Try to download from releases first
-$ReleaseUrl = "https://github.com/$Repo/releases/latest/download/cli-t-$Target.zip"
+$ReleaseUrl = "https://github.com/$Repo/releases/latest/download/cli-t-$Target.tar.gz"
 $TempDir = Join-Path $env:TEMP "cli-t-install"
 if (Test-Path $TempDir) {
     Remove-Item $TempDir -Recurse -Force
 }
 New-Item -ItemType Directory -Path $TempDir | Out-Null
 
-$ZipPath = Join-Path $TempDir "cli-t.zip"
+$TarGzPath = Join-Path $TempDir "cli-t.tar.gz"
 
 try {
     Write-Host "Checking for pre-built release..." -ForegroundColor Yellow
     
     try {
-        Invoke-WebRequest -Uri $ReleaseUrl -OutFile $ZipPath -UseBasicParsing -ErrorAction Stop
+        Invoke-WebRequest -Uri $ReleaseUrl -OutFile $TarGzPath -UseBasicParsing -ErrorAction Stop
         Write-Host "Downloading pre-built binary..." -ForegroundColor Green
         
-        # Extract
+        # Extract tar.gz
         Write-Host "Extracting..." -ForegroundColor Yellow
-        Expand-Archive -Path $ZipPath -DestinationPath $TempDir -Force
+        tar -xzf $TarGzPath -C $TempDir
         
-        $BinaryPath = Join-Path $TempDir "cli-t.exe"
-        if (-not (Test-Path $BinaryPath)) {
-            # Try alternative name
-            $AltPath = Get-ChildItem $TempDir -Filter "*.exe" | Select-Object -First 1
-            if ($AltPath) {
-                $BinaryPath = $AltPath.FullName
-            } else {
-                throw "Binary not found in archive"
+        # Find the exe - check common names and search recursively
+        $BinaryPath = $null
+        $SearchNames = @("cli-t.exe", "cli_t.exe")
+        foreach ($name in $SearchNames) {
+            $found = Get-ChildItem $TempDir -Filter $name -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) {
+                $BinaryPath = $found.FullName
+                break
             }
+        }
+        
+        # Fallback: find any exe
+        if (-not $BinaryPath) {
+            $AnyExe = Get-ChildItem $TempDir -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($AnyExe) {
+                $BinaryPath = $AnyExe.FullName
+            }
+        }
+        
+        if (-not $BinaryPath) {
+            throw "Binary not found in archive"
         }
         
         Write-Host "Pre-built binary downloaded successfully!" -ForegroundColor Green
