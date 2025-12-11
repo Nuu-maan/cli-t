@@ -10,36 +10,45 @@ A minimal real-time CLI chat application built with Rust. Create rooms, invite f
 - **Simple commands** - Easy-to-use CLI interface
 - **Lightweight** - Fast and minimal dependencies
 
-## Quick Install
+## Installation
+
+### One-Line Install (Recommended)
 
 **Linux/macOS:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.sh | bash
 ```
 
-**Windows (PowerShell):**
+**Windows (PowerShell - Run as Administrator):**
 ```powershell
 irm https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.ps1 | iex
 ```
 
-The install script will build cli-t from source (requires Rust). After installation, restart your terminal and you're ready to go!
+### Using Cargo
 
-## Manual Installation
+```bash
+cargo install cli-t
+```
+
+### Manual Download
+
+Download binaries for your platform from [GitHub Releases](https://github.com/Nuu-maan/cli-t/releases):
+
+| Platform | Download |
+|----------|----------|
+| Windows (x64) | [cli-t-x86_64-pc-windows-msvc.zip](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-x86_64-pc-windows-msvc.zip) |
+| Linux (x64) | [cli-t-x86_64-unknown-linux-gnu.tar.gz](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-x86_64-unknown-linux-gnu.tar.gz) |
+| Linux (ARM64) | [cli-t-aarch64-unknown-linux-gnu.tar.gz](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-aarch64-unknown-linux-gnu.tar.gz) |
+| macOS (Intel) | [cli-t-x86_64-apple-darwin.tar.gz](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-x86_64-apple-darwin.tar.gz) |
+| macOS (Apple Silicon) | [cli-t-aarch64-apple-darwin.tar.gz](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-aarch64-apple-darwin.tar.gz) |
 
 ### From Source
 
 ```bash
 git clone https://github.com/Nuu-maan/cli-t.git
 cd cli-t
-
-# Build and install
-cargo install --path server
 cargo install --path client
 ```
-
-### Pre-built Binaries
-
-Download binaries from [GitHub Releases](https://github.com/Nuu-maan/cli-t/releases) and add them to your PATH.
 
 ## Quick Start
 

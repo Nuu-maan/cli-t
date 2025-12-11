@@ -16,9 +16,9 @@ Thumbs.db
 
 # Build artifacts
 .orchids.json
+.orchids/
 *.exe
 *.pdb
 *.d
 *.rmeta
 *.rlib
-

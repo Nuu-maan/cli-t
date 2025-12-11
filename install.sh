@@ -23,11 +23,15 @@ esac
 # Map OS to target triple
 case "$OS" in
     Linux*) 
-        TARGET="x86_64-unknown-linux-gnu"
+        if [ "$ARCH" = "aarch64" ]; then
+            TARGET="aarch64-unknown-linux-gnu"
+        else
+            TARGET="x86_64-unknown-linux-gnu"
+        fi
         BINARY_NAME="cli-t"
         ;;
     Darwin*)
-        if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+        if [ "$ARCH" = "aarch64" ]; then
             TARGET="aarch64-apple-darwin"
         else
             TARGET="x86_64-apple-darwin"
