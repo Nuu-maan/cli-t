@@ -60,6 +60,13 @@ cargo install --path client
 
 2. **Start a client:**
    ```bash
+   # Linux/macOS
+   export CLI_T_SERVER_ADDR=127.0.0.1:8080
+   cli-t
+   ```
+   ```powershell
+   # Windows PowerShell
+   $env:CLI_T_SERVER_ADDR="127.0.0.1:8080"
    cli-t
    ```
 
@@ -115,14 +122,22 @@ Left the room.
 
 ## Custom Server Address
 
-Both server and client accept a command-line argument for the address:
+The server accepts a command-line argument for the bind address, and the client
+reads the target address from the `CLI_T_SERVER_ADDR` environment variable
+(optional CLI arg override):
 
 ```bash
 # Server: bind to specific address
 cli-t-server 0.0.0.0:8080
 
 # Client: connect to specific server
-cli-t example.com:8080
+export CLI_T_SERVER_ADDR=example.com:8080
+cli-t
+```
+```powershell
+# Client: connect to specific server (Windows PowerShell)
+$env:CLI_T_SERVER_ADDR="example.com:8080"
+cli-t
 ```
 
 ## Contributing

@@ -3,16 +3,26 @@ use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use std::io::{self, Write};
 
+fn resolve_server_addr() -> String {
+    if let Ok(addr) = std::env::var("CLI_T_SERVER_ADDR") {
+        return addr;
+    }
+    if let Some(arg) = std::env::args().nth(1) {
+        return arg;
+    }
+
+    eprintln!("Server address not configured. Set CLI_T_SERVER_ADDR or pass it as the first argument.");
+    std::process::exit(1);
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get server address from command line or use default
-    let addr = std::env::args()
-        .nth(1)
-        .unwrap_or_else(|| "148.251.71.9:1111".to_string());
+    let addr = resolve_server_addr();
     
     // Welcome message
     println!("Welcome to cli-t!\n");
-    println!("Connecting to: {}\n", addr);
+    println!("Connecting...\n");
     
     // Get nickname
     print!("Nick (leave blank for random): ");
