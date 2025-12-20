@@ -104,18 +104,23 @@ try {
     Write-Host "Installing to $LocalBin..." -ForegroundColor Yellow
     Copy-Item $BinaryPath (Join-Path $LocalBin "cli-t.exe") -Force
     
-    # Add to PATH if not already there
-    $CurrentPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    if ($CurrentPath -notlike "*$LocalBin*") {
-        [Environment]::SetEnvironmentVariable("Path", "$CurrentPath;$LocalBin", "User")
-        Write-Host "Added $LocalBin to PATH" -ForegroundColor Green
-        Write-Host "You may need to restart your terminal for PATH changes to take effect" -ForegroundColor Yellow
-    }
+      # Add to PATH permanently (User scope)
+      $CurrentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+      if ($CurrentPath -notlike "*$LocalBin*") {
+          [Environment]::SetEnvironmentVariable("Path", "$CurrentPath;$LocalBin", "User")
+          Write-Host "Added $LocalBin to User PATH" -ForegroundColor Green
+      }
+      
+      # Also add to current session PATH immediately
+      $env:Path = "$env:Path;$LocalBin"
+      Write-Host "Added to current session PATH" -ForegroundColor Green
     
-    Write-Host ""
-    Write-Host "✓ cli-t installed successfully!" -ForegroundColor Green
-    Write-Host "Run 'cli-t' to start chatting" -ForegroundColor Green
-    Write-Host ""
+      Write-Host ""
+      Write-Host "✓ cli-t installed successfully!" -ForegroundColor Green
+      Write-Host ""
+      Write-Host "Installation complete! You can now run 'cli-t' from anywhere." -ForegroundColor Cyan
+      Write-Host "Note: If this doesn't work in current terminal, restart it." -ForegroundColor Yellow
+      Write-Host ""
     
 } catch {
     Write-Host "Error: $_" -ForegroundColor Red
