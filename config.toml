@@ -1,0 +1,5 @@
+[server]
+# Server IP address and port
+# Change this to your server's IP address and port
+ip = "ip-address"
+port = "port"

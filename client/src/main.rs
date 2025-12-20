@@ -2,11 +2,43 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use std::io::{self, Write};
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct Config {
+    server: ServerConfig,
+}
+
+#[derive(Deserialize)]
+struct ServerConfig {
+    ip: String,
+    port: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Get server address from command line or use default
-    let addr = "148.251.71.9:1111";
+    // Read config from config.toml
+    let config_content = match std::fs::read_to_string("config.toml") {
+        Ok(content) => content,
+        Err(_) => {
+            eprintln!("Error: config.toml not found!");
+            eprintln!("Please create a config.toml file with the following format:");
+            eprintln!("[server]");
+            eprintln!("ip = \"your-server-ip\"");
+            eprintln!("port = \"your-server-port\"");
+            return Err("Config file not found".into());
+        }
+    };
+    
+    let config: Config = match toml::from_str(&config_content) {
+        Ok(config) => config,
+        Err(e) => {
+            eprintln!("Error parsing config.toml: {}", e);
+            return Err(e.into());
+        }
+    };
+    
+    let addr = format!("{}:{}", config.server.ip, config.server.port);
     
     // Welcome message
     println!("Welcome to cli-t!\n");
