@@ -17,6 +17,20 @@ A minimal real-time CLI chat application built with Rust.
 
 ### Pre-built Binaries
 
+**Quick Install (Linux/macOS):**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.sh | bash
+```
+
+**Quick Install (Windows PowerShell):**
+
+```powershell
+irm https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.ps1 | iex
+```
+
+**Manual Download:**
+
 Download from [GitHub Releases](https://github.com/Nuu-maan/cli-t/releases):
 
 | Platform | Architecture | Download |
