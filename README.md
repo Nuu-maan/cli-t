@@ -12,25 +12,7 @@ A minimal real-time CLI chat application built with Rust. Create rooms, invite f
 
 ## Installation
 
-### One-Line Install (Recommended)
-
-**Linux/macOS:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.sh | bash
-```
-
-**Windows (PowerShell - Run as Administrator):**
-```powershell
-irm https://raw.githubusercontent.com/Nuu-maan/cli-t/main/install.ps1 | iex
-```
-
-### Using Cargo
-
-```bash
-cargo install cli-t
-```
-
-### Manual Download
+### Using Pre-built Binaries (Recommended)
 
 Download binaries for your platform from [GitHub Releases](https://github.com/Nuu-maan/cli-t/releases):
 
@@ -42,35 +24,66 @@ Download binaries for your platform from [GitHub Releases](https://github.com/Nu
 | macOS (Intel) | [cli-t-x86_64-apple-darwin.tar.gz](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-x86_64-apple-darwin.tar.gz) |
 | macOS (Apple Silicon) | [cli-t-aarch64-apple-darwin.tar.gz](https://github.com/Nuu-maan/cli-t/releases/latest/download/cli-t-aarch64-apple-darwin.tar.gz) |
 
-### From Source
+After downloading, extract the archive and configure your server address in `config.toml` (see Configuration section below).
+
+### Self-Hosting from Source
 
 ```bash
 git clone https://github.com/Nuu-maan/cli-t.git
 cd cli-t
-cargo install --path client
+cargo build --release
+
+# Binaries will be in target/release/
+# - cli-t (client)
+# - cli-t-server (server)
+```
+
+## Configuration
+
+Create a `config.toml` file in the same directory as the client binary:
+
+```toml
+[server]
+ip = "your-server-ip"
+port = "8080"
+```
+
+Example for local testing:
+```toml
+[server]
+ip = "127.0.0.1"
+port = "8080"
 ```
 
 ## Quick Start
 
+### Using Pre-built Binaries
+
+1. **Download and extract** the binary for your platform
+2. **Create `config.toml`** with your server address (see Configuration section)
+3. **Run the client:**
+    ```bash
+    ./cli-t
+    ```
+
+### Self-Hosting
+
 1. **Start the server:**
-   ```bash
-   cli-t-server
-   ```
-   Server listens on `127.0.0.1:8080` by default.
+    ```bash
+    cargo run --package cli-t-server
+    # Or if built: ./target/release/cli-t-server
+    ```
+    Server listens on `127.0.0.1:8080` by default.
 
-2. **Start a client:**
-   ```bash
-   # Linux/macOS
-   export CLI_T_SERVER_ADDR=127.0.0.1:8080
-   cli-t
-   ```
-   ```powershell
-   # Windows PowerShell
-   $env:CLI_T_SERVER_ADDR="127.0.0.1:8080"
-   cli-t
-   ```
+2. **Configure client** by creating `config.toml` with server address
 
-3. **Create or join a room:**
+3. **Start the client:**
+    ```bash
+    cargo run --package cli-t
+    # Or if built: ./target/release/cli-t
+    ```
+
+4. **Create or join a room:**
    ```
    > /create
    Room created: room-abc12
@@ -120,24 +133,26 @@ alice: Hi bob!
 Left the room.
 ```
 
-## Custom Server Address
+## Running Your Own Server
 
-The server accepts a command-line argument for the bind address, and the client
-reads the target address from the `CLI_T_SERVER_ADDR` environment variable
-(optional CLI arg override):
+To host your own server:
 
 ```bash
-# Server: bind to specific address
-cli-t-server 0.0.0.0:8080
+# Using pre-built binary
+./cli-t-server
 
-# Client: connect to specific server
-export CLI_T_SERVER_ADDR=example.com:8080
-cli-t
+# Or from source
+cargo run --package cli-t-server
+
+# Or specify bind address
+./cli-t-server 0.0.0.0:8080
 ```
-```powershell
-# Client: connect to specific server (Windows PowerShell)
-$env:CLI_T_SERVER_ADDR="example.com:8080"
-cli-t
+
+Then configure clients to connect by editing their `config.toml`:
+```toml
+[server]
+ip = "your-server-ip"
+port = "8080"
 ```
 
 ## Contributing
@@ -165,17 +180,37 @@ git clone https://github.com/Nuu-maan/cli-t.git
 cd cli-t
 
 # Run server
-cd server && cargo run
+cargo run --package cli-t-server
 
 # Run client (in another terminal)
-cd client && cargo run
+cargo run --package cli-t
 ```
 
 Feel free to open an issue if you have questions or suggestions!
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License
+
+Copyright (c) 2025 nuu-maan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ## Acknowledgments
 
