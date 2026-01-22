@@ -1,5 +1,16 @@
 [server]
-# Server IP address and port
-# Change this to your server's IP address and port
-ip = "ip-address"
-port = "port"
+ip = "127.0.0.1"
+port = "8080"
+
+[theme]
+username_color = "cyan"
+message_color = "white"
+system_color = "yellow"
+timestamp_color = "bright_black"
+
+[features]
+colors = true
+timestamps = true
+sound_notifications = true
+auto_reconnect = true
+save_logs = false
