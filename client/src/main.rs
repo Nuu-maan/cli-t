@@ -272,6 +272,37 @@ fn find_config_file() -> Option<PathBuf> {
             if exe_dir_config.exists() {
                 return Some(exe_dir_config);
             }
+            
+            // Try parent directories (for workspace/project root)
+            let mut search_dir = exe_dir.to_path_buf();
+            for _ in 0..5 {
+                // Go up to 5 levels to find project root
+                if let Some(parent) = search_dir.parent() {
+                    search_dir = parent.to_path_buf();
+                    let parent_config = search_dir.join("config.toml");
+                    if parent_config.exists() {
+                        return Some(parent_config);
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    // Try walking up from current directory
+    if let Ok(current_dir) = std::env::current_dir() {
+        let mut search_dir = current_dir.clone();
+        for _ in 0..5 {
+            let config_path = search_dir.join("config.toml");
+            if config_path.exists() {
+                return Some(config_path);
+            }
+            if let Some(parent) = search_dir.parent() {
+                search_dir = parent.to_path_buf();
+            } else {
+                break;
+            }
         }
     }
 
@@ -316,6 +347,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 eprintln!("Error: config.toml not found!");
                 eprintln!("Searched in:");
                 eprintln!("  - Current directory: ./config.toml");
+                if let Ok(current_dir) = std::env::current_dir() {
+                    let mut search_dir = current_dir.clone();
+                    for i in 0..5 {
+                        eprintln!("  - Parent level {}: {:?}", i, search_dir.join("config.toml"));
+                        if let Some(parent) = search_dir.parent() {
+                            search_dir = parent.to_path_buf();
+                        } else {
+                            break;
+                        }
+                    }
+                }
                 if let Ok(exe_path) = std::env::current_exe() {
                     if let Some(exe_dir) = exe_path.parent() {
                         eprintln!("  - Executable directory: {:?}", exe_dir.join("config.toml"));
