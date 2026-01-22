@@ -35,7 +35,8 @@ struct FeatureConfig {
     #[serde(default = "default_true")]
     colors: bool,
     #[serde(default = "default_true")]
-    timestamps: bool,
+    #[allow(dead_code)]
+    timestamps: bool, // Reserved for future timestamp toggle feature
     #[serde(default = "default_true")]
     sound_notifications: bool,
     #[serde(default = "default_true")]
@@ -76,10 +77,10 @@ struct ServerConfig {
 
 struct ClientState {
     connected: bool,
-    current_room: Option<String>,
+    #[allow(dead_code)]
+    current_room: Option<String>, // Reserved for future room status display
     command_history: VecDeque<String>,
     history_index: usize,
-    log_file: Option<std::fs::File>,
 }
 
 impl ClientState {
@@ -89,7 +90,6 @@ impl ClientState {
             current_room: None,
             command_history: VecDeque::new(),
             history_index: 0,
-            log_file: None,
         }
     }
 
@@ -104,7 +104,9 @@ impl ClientState {
         self.history_index = self.command_history.len();
     }
 
+    #[allow(dead_code)]
     fn history_up(&mut self) -> Option<String> {
+        // Reserved for future keyboard input handling (arrow keys)
         if self.history_index > 0 {
             self.history_index -= 1;
             self.command_history.get(self.history_index).cloned()
@@ -113,7 +115,9 @@ impl ClientState {
         }
     }
 
+    #[allow(dead_code)]
     fn history_down(&mut self) -> Option<String> {
+        // Reserved for future keyboard input handling (arrow keys)
         if self.history_index < self.command_history.len() {
             self.history_index += 1;
             if self.history_index < self.command_history.len() {
@@ -214,6 +218,49 @@ fn format_message(line: &str, config: &Config) -> String {
     }
 }
 
+fn is_window_active() -> bool {
+    #[cfg(windows)]
+    {
+        use winapi::um::winuser::{GetForegroundWindow, GetWindowThreadProcessId};
+        use winapi::um::processthreadsapi::GetCurrentProcessId;
+        
+        unsafe {
+            let hwnd = GetForegroundWindow();
+            if hwnd.is_null() {
+                return false;
+            }
+            
+            let mut pid: u32 = 0;
+            GetWindowThreadProcessId(hwnd, &mut pid);
+            let current_pid = GetCurrentProcessId();
+            
+            pid == current_pid
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        // On non-Windows, assume active (can't easily detect)
+        true
+    }
+}
+
+fn show_windows_toast(title: &str, message: &str) {
+    #[cfg(windows)]
+    {
+        use winrt_notification::Toast;
+        let _ = Toast::new(Toast::POWERSHELL_APP_ID)
+            .title(title)
+            .text1(message)
+            .duration(winrt_notification::Duration::Short)
+            .show();
+    }
+    #[cfg(not(windows))]
+    {
+        // On non-Windows, just print
+        println!("{}: {}", title, message);
+    }
+}
+
 fn play_notification_sound() {
     #[cfg(windows)]
     {
@@ -254,6 +301,65 @@ async fn connect_with_retry(
     }
 }
 
+fn find_config_file() -> Option<PathBuf> {
+    // Try current working directory first
+    let current_dir = PathBuf::from("config.toml");
+    if current_dir.exists() {
+        return Some(current_dir);
+    }
+
+    // Try same directory as executable
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let exe_dir_config = exe_dir.join("config.toml");
+            if exe_dir_config.exists() {
+                return Some(exe_dir_config);
+            }
+            
+            // Try parent directories (for workspace/project root)
+            let mut search_dir = exe_dir.to_path_buf();
+            for _ in 0..5 {
+                // Go up to 5 levels to find project root
+                if let Some(parent) = search_dir.parent() {
+                    search_dir = parent.to_path_buf();
+                    let parent_config = search_dir.join("config.toml");
+                    if parent_config.exists() {
+                        return Some(parent_config);
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    // Try walking up from current directory
+    if let Ok(current_dir) = std::env::current_dir() {
+        let mut search_dir = current_dir.clone();
+        for _ in 0..5 {
+            let config_path = search_dir.join("config.toml");
+            if config_path.exists() {
+                return Some(config_path);
+            }
+            if let Some(parent) = search_dir.parent() {
+                search_dir = parent.to_path_buf();
+            } else {
+                break;
+            }
+        }
+    }
+
+    // Try user's home directory (optional)
+    if let Some(home) = dirs::home_dir() {
+        let home_config = home.join("config.toml");
+        if home_config.exists() {
+            return Some(home_config);
+        }
+    }
+
+    None
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse command line arguments for server address override
@@ -270,13 +376,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         (config, addr)
     } else {
-        // Read config from config.toml
-        let config_content = match std::fs::read_to_string("config.toml") {
-            Ok(content) => content,
-            Err(_) => {
+        // Read config from config.toml - try multiple locations
+        let config_path = find_config_file();
+        let config_content = match config_path {
+            Some(path) => match std::fs::read_to_string(&path) {
+                Ok(content) => content,
+                Err(e) => {
+                    eprintln!("Error reading config file {:?}: {}", path, e);
+                    return Err(format!("Failed to read config file: {}", e).into());
+                }
+            },
+            None => {
                 eprintln!("Error: config.toml not found!");
+                eprintln!("Searched in:");
+                eprintln!("  - Current directory: ./config.toml");
+                if let Ok(current_dir) = std::env::current_dir() {
+                    let mut search_dir = current_dir.clone();
+                    for i in 0..5 {
+                        eprintln!("  - Parent level {}: {:?}", i, search_dir.join("config.toml"));
+                        if let Some(parent) = search_dir.parent() {
+                            search_dir = parent.to_path_buf();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+                if let Ok(exe_path) = std::env::current_exe() {
+                    if let Some(exe_dir) = exe_path.parent() {
+                        eprintln!("  - Executable directory: {:?}", exe_dir.join("config.toml"));
+                    }
+                }
+                if let Some(home) = dirs::home_dir() {
+                    eprintln!("  - Home directory: {:?}", home.join("config.toml"));
+                }
+                eprintln!();
                 eprintln!("Usage: cli-t [--server <ip> [port]]");
-                eprintln!("Or create a config.toml file with:");
+                eprintln!("Or create a config.toml file in one of the above locations with:");
                 eprintln!("[server]");
                 eprintln!("ip = \"your-server-ip\"");
                 eprintln!("port = \"your-server-port\"");
@@ -477,9 +612,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let _ = file.flush();
                             }
 
-                            // Play sound notification
-                            if config.features.sound_notifications && !line.trim().is_empty() {
-                                play_notification_sound();
+                            // Only notify if message is not empty and not a system message
+                            if !line.trim().is_empty() && !line.trim().starts_with('[') {
+                                let window_active = is_window_active();
+                                
+                                // Play sound only when window is NOT active (in background)
+                                if config.features.sound_notifications && !window_active {
+                                    play_notification_sound();
+                                }
+                                
+                                // Show Windows toast notification (minimal, non-spammy)
+                                #[cfg(windows)]
+                                {
+                                    // Extract username and message for notification
+                                    let username_re = Regex::new(r"^\[(\d{2}:\d{2})\]\s*(\w+):\s*(.*)$").unwrap();
+                                    if let Some(caps) = username_re.captures(&line) {
+                                        let username = caps.get(2).map(|m| m.as_str()).unwrap_or("User");
+                                        let message = caps.get(3).map(|m| m.as_str()).unwrap_or("");
+                                        
+                                        // Truncate long messages for notification
+                                        let short_msg = if message.len() > 50 {
+                                            format!("{}...", &message[..47])
+                                        } else {
+                                            message.to_string()
+                                        };
+                                        
+                                        show_windows_toast("cli-t", &format!("{}: {}", username, short_msg));
+                                    } else {
+                                        // System message or action
+                                        let clean_msg = line.trim().replace('[', "").replace(']', "");
+                                        let short_msg = if clean_msg.len() > 50 {
+                                            format!("{}...", &clean_msg[..47])
+                                        } else {
+                                            clean_msg
+                                        };
+                                        show_windows_toast("cli-t", &short_msg);
+                                    }
+                                }
                             }
                         }
                         Err(e) => {

@@ -19,7 +19,8 @@ enum RoomType {
 #[derive(Clone, Debug)]
 struct Message {
     timestamp: DateTime<Local>,
-    client_id: ClientId,
+    #[allow(dead_code)]
+    client_id: ClientId, // Reserved for future moderation/logging features
     nickname: String,
     content: String,
     is_action: bool,
@@ -37,17 +38,22 @@ struct Room {
     moderators: Arc<RwLock<HashSet<ClientId>>>,
     banned: Arc<RwLock<HashSet<ClientId>>>,
     message_history: Arc<RwLock<Vec<Message>>>,
-    created_at: DateTime<Local>,
+    #[allow(dead_code)]
+    created_at: DateTime<Local>, // Reserved for future room age/analytics features
     persistent: bool,
 }
 
 struct ClientInfo {
-    id: ClientId,
-    nickname: Arc<RwLock<String>>,
-    last_message_time: Arc<RwLock<Instant>>,
+    #[allow(dead_code)]
+    id: ClientId, // Reserved for future logging/analytics features
+    #[allow(dead_code)]
+    nickname: Arc<RwLock<String>>, // Stored for consistency, accessed via separate nickname_arc
+    #[allow(dead_code)]
+    last_message_time: Arc<RwLock<Instant>>, // Reserved for future rate limiting enhancements
     message_count: Arc<RwLock<u32>>,
     rate_limit_window: Arc<RwLock<Instant>>,
-    ip: String,
+    #[allow(dead_code)]
+    ip: String, // Reserved for future moderation/logging features
 }
 
 struct ServerState {
@@ -178,7 +184,116 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let state = Arc::new(ServerState::new());
 
-    // Spawn metrics display task
+    // Discord webhook URL (set via DISCORD_WEBHOOK env var or use default)
+    let webhook_url = std::env::var("DISCORD_WEBHOOK")
+        .unwrap_or_else(|_| "https://discord.com/api/webhooks/1463937853519167529/V91ySkIB_0g1Z-dcWS16pQcWWIgzyPFia0WdZHqgVeApls9pl_cCVDRdAgtg66PydE0W".to_string());
+    
+    // Only start webhook task if URL is not empty
+    if !webhook_url.is_empty() {
+    
+    // Spawn Discord webhook metrics task (updates every 5 minutes)
+    let state_discord = state.clone();
+    let webhook_url_clone = webhook_url.clone();
+    tokio::spawn(async move {
+        let mut interval = interval(Duration::from_secs(300)); // 5 minutes
+        let client = reqwest::Client::new();
+        let mut message_id: Option<String> = None;
+        
+        loop {
+            interval.tick().await;
+            
+            let total_users = *state_discord.total_users.read().await;
+            let active_users = *state_discord.active_users.read().await;
+            let total_messages = *state_discord.total_messages.read().await;
+            let total_rooms = state_discord.rooms.read().await.len();
+            let uptime_secs = state_discord.start_time.elapsed().as_secs();
+            
+            let hours = uptime_secs / 3600;
+            let minutes = (uptime_secs % 3600) / 60;
+            let seconds = uptime_secs % 60;
+            let uptime_str = if hours > 0 {
+                format!("{}h {}m {}s", hours, minutes, seconds)
+            } else if minutes > 0 {
+                format!("{}m {}s", minutes, seconds)
+            } else {
+                format!("{}s", seconds)
+            };
+            
+            let embed = serde_json::json!({
+                "title": "📊 cli-t Server Metrics",
+                "color": 0x00ff00,
+                "fields": [
+                    {
+                        "name": "👥 Users",
+                        "value": format!("**Total:** {}\n**Active:** {}", total_users, active_users),
+                        "inline": true
+                    },
+                    {
+                        "name": "💬 Messages",
+                        "value": format!("**Total:** {}", total_messages),
+                        "inline": true
+                    },
+                    {
+                        "name": "🏠 Rooms",
+                        "value": format!("**Active:** {}", total_rooms),
+                        "inline": true
+                    },
+                    {
+                        "name": "⏱️ Uptime",
+                        "value": uptime_str,
+                        "inline": true
+                    },
+                    {
+                        "name": "🕐 Last Update",
+                        "value": chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                        "inline": true
+                    }
+                ],
+                "footer": {
+                    "text": "cli-t Server"
+                },
+                "timestamp": chrono::Utc::now().to_rfc3339()
+            });
+            
+            let payload = serde_json::json!({
+                "embeds": [embed]
+            });
+            
+            // Update existing message or create new one
+            if let Some(ref msg_id) = message_id {
+                let edit_url = format!("{}/messages/{}", webhook_url_clone, msg_id);
+                match client.patch(&edit_url).json(&payload).send().await {
+                    Ok(_) => {
+                        // Successfully updated
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to update Discord webhook: {}. Creating new message.", e);
+                        message_id = None; // Reset to create new message next time
+                    }
+                }
+            }
+            
+            // Create new message if we don't have an ID
+            if message_id.is_none() {
+                match client.post(&webhook_url_clone).json(&payload).send().await {
+                    Ok(response) => {
+                        if let Ok(json) = response.json::<serde_json::Value>().await {
+                            if let Some(id) = json.get("id").and_then(|v| v.as_str()) {
+                                message_id = Some(id.to_string());
+                                tracing::info!("Discord webhook message created with ID: {}", id);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to send Discord webhook: {}", e);
+                    }
+                }
+            }
+        }
+    });
+    }
+    
+    // Spawn console metrics display task (every 5 seconds, no Discord spam)
     let state_metrics = state.clone();
     tokio::spawn(async move {
         let mut interval = interval(Duration::from_secs(5));
@@ -189,7 +304,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let total_messages = *state_metrics.total_messages.read().await;
             let total_rooms = state_metrics.rooms.read().await.len();
             let uptime = state_metrics.start_time.elapsed().as_secs();
-
+            
             print!("\r\x1b[K"); // Clear line
             print!(
                 "Metrics | Users: {} (Active: {}) | Messages: {} | Rooms: {} | Uptime: {}s",
