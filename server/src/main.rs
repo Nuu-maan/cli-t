@@ -19,7 +19,8 @@ enum RoomType {
 #[derive(Clone, Debug)]
 struct Message {
     timestamp: DateTime<Local>,
-    client_id: ClientId,
+    #[allow(dead_code)]
+    client_id: ClientId, // Reserved for future moderation/logging features
     nickname: String,
     content: String,
     is_action: bool,
@@ -37,17 +38,22 @@ struct Room {
     moderators: Arc<RwLock<HashSet<ClientId>>>,
     banned: Arc<RwLock<HashSet<ClientId>>>,
     message_history: Arc<RwLock<Vec<Message>>>,
-    created_at: DateTime<Local>,
+    #[allow(dead_code)]
+    created_at: DateTime<Local>, // Reserved for future room age/analytics features
     persistent: bool,
 }
 
 struct ClientInfo {
-    id: ClientId,
-    nickname: Arc<RwLock<String>>,
-    last_message_time: Arc<RwLock<Instant>>,
+    #[allow(dead_code)]
+    id: ClientId, // Reserved for future logging/analytics features
+    #[allow(dead_code)]
+    nickname: Arc<RwLock<String>>, // Stored for consistency, accessed via separate nickname_arc
+    #[allow(dead_code)]
+    last_message_time: Arc<RwLock<Instant>>, // Reserved for future rate limiting enhancements
     message_count: Arc<RwLock<u32>>,
     rate_limit_window: Arc<RwLock<Instant>>,
-    ip: String,
+    #[allow(dead_code)]
+    ip: String, // Reserved for future moderation/logging features
 }
 
 struct ServerState {
