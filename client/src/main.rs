@@ -258,6 +258,34 @@ async fn connect_with_retry(
     }
 }
 
+fn find_config_file() -> Option<PathBuf> {
+    // Try current working directory first
+    let current_dir = PathBuf::from("config.toml");
+    if current_dir.exists() {
+        return Some(current_dir);
+    }
+
+    // Try same directory as executable
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let exe_dir_config = exe_dir.join("config.toml");
+            if exe_dir_config.exists() {
+                return Some(exe_dir_config);
+            }
+        }
+    }
+
+    // Try user's home directory (optional)
+    if let Some(home) = dirs::home_dir() {
+        let home_config = home.join("config.toml");
+        if home_config.exists() {
+            return Some(home_config);
+        }
+    }
+
+    None
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse command line arguments for server address override
@@ -274,13 +302,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         (config, addr)
     } else {
-        // Read config from config.toml
-        let config_content = match std::fs::read_to_string("config.toml") {
-            Ok(content) => content,
-            Err(_) => {
+        // Read config from config.toml - try multiple locations
+        let config_path = find_config_file();
+        let config_content = match config_path {
+            Some(path) => match std::fs::read_to_string(&path) {
+                Ok(content) => content,
+                Err(e) => {
+                    eprintln!("Error reading config file {:?}: {}", path, e);
+                    return Err(format!("Failed to read config file: {}", e).into());
+                }
+            },
+            None => {
                 eprintln!("Error: config.toml not found!");
+                eprintln!("Searched in:");
+                eprintln!("  - Current directory: ./config.toml");
+                if let Ok(exe_path) = std::env::current_exe() {
+                    if let Some(exe_dir) = exe_path.parent() {
+                        eprintln!("  - Executable directory: {:?}", exe_dir.join("config.toml"));
+                    }
+                }
+                if let Some(home) = dirs::home_dir() {
+                    eprintln!("  - Home directory: {:?}", home.join("config.toml"));
+                }
+                eprintln!();
                 eprintln!("Usage: cli-t [--server <ip> [port]]");
-                eprintln!("Or create a config.toml file with:");
+                eprintln!("Or create a config.toml file in one of the above locations with:");
                 eprintln!("[server]");
                 eprintln!("ip = \"your-server-ip\"");
                 eprintln!("port = \"your-server-port\"");
