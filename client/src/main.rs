@@ -35,7 +35,8 @@ struct FeatureConfig {
     #[serde(default = "default_true")]
     colors: bool,
     #[serde(default = "default_true")]
-    timestamps: bool,
+    #[allow(dead_code)]
+    timestamps: bool, // Reserved for future timestamp toggle feature
     #[serde(default = "default_true")]
     sound_notifications: bool,
     #[serde(default = "default_true")]
@@ -76,10 +77,10 @@ struct ServerConfig {
 
 struct ClientState {
     connected: bool,
-    current_room: Option<String>,
+    #[allow(dead_code)]
+    current_room: Option<String>, // Reserved for future room status display
     command_history: VecDeque<String>,
     history_index: usize,
-    log_file: Option<std::fs::File>,
 }
 
 impl ClientState {
@@ -89,7 +90,6 @@ impl ClientState {
             current_room: None,
             command_history: VecDeque::new(),
             history_index: 0,
-            log_file: None,
         }
     }
 
@@ -104,7 +104,9 @@ impl ClientState {
         self.history_index = self.command_history.len();
     }
 
+    #[allow(dead_code)]
     fn history_up(&mut self) -> Option<String> {
+        // Reserved for future keyboard input handling (arrow keys)
         if self.history_index > 0 {
             self.history_index -= 1;
             self.command_history.get(self.history_index).cloned()
@@ -113,7 +115,9 @@ impl ClientState {
         }
     }
 
+    #[allow(dead_code)]
     fn history_down(&mut self) -> Option<String> {
+        // Reserved for future keyboard input handling (arrow keys)
         if self.history_index < self.command_history.len() {
             self.history_index += 1;
             if self.history_index < self.command_history.len() {
