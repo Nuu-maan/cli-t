@@ -218,6 +218,49 @@ fn format_message(line: &str, config: &Config) -> String {
     }
 }
 
+fn is_window_active() -> bool {
+    #[cfg(windows)]
+    {
+        use winapi::um::winuser::{GetForegroundWindow, GetWindowThreadProcessId};
+        use winapi::um::processthreadsapi::GetCurrentProcessId;
+        
+        unsafe {
+            let hwnd = GetForegroundWindow();
+            if hwnd.is_null() {
+                return false;
+            }
+            
+            let mut pid: u32 = 0;
+            GetWindowThreadProcessId(hwnd, &mut pid);
+            let current_pid = GetCurrentProcessId();
+            
+            pid == current_pid
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        // On non-Windows, assume active (can't easily detect)
+        true
+    }
+}
+
+fn show_windows_toast(title: &str, message: &str) {
+    #[cfg(windows)]
+    {
+        use winrt_notification::Toast;
+        let _ = Toast::new(Toast::POWERSHELL_APP_ID)
+            .title(title)
+            .text1(message)
+            .duration(winrt_notification::Duration::Short)
+            .show();
+    }
+    #[cfg(not(windows))]
+    {
+        // On non-Windows, just print
+        println!("{}: {}", title, message);
+    }
+}
+
 fn play_notification_sound() {
     #[cfg(windows)]
     {
@@ -569,9 +612,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 let _ = file.flush();
                             }
 
-                            // Play sound notification
-                            if config.features.sound_notifications && !line.trim().is_empty() {
-                                play_notification_sound();
+                            // Only notify if message is not empty and not a system message
+                            if !line.trim().is_empty() && !line.trim().starts_with('[') {
+                                let window_active = is_window_active();
+                                
+                                // Play sound only when window is NOT active (in background)
+                                if config.features.sound_notifications && !window_active {
+                                    play_notification_sound();
+                                }
+                                
+                                // Show Windows toast notification (minimal, non-spammy)
+                                #[cfg(windows)]
+                                {
+                                    // Extract username and message for notification
+                                    let username_re = Regex::new(r"^\[(\d{2}:\d{2})\]\s*(\w+):\s*(.*)$").unwrap();
+                                    if let Some(caps) = username_re.captures(&line) {
+                                        let username = caps.get(2).map(|m| m.as_str()).unwrap_or("User");
+                                        let message = caps.get(3).map(|m| m.as_str()).unwrap_or("");
+                                        
+                                        // Truncate long messages for notification
+                                        let short_msg = if message.len() > 50 {
+                                            format!("{}...", &message[..47])
+                                        } else {
+                                            message.to_string()
+                                        };
+                                        
+                                        show_windows_toast("cli-t", &format!("{}: {}", username, short_msg));
+                                    } else {
+                                        // System message or action
+                                        let clean_msg = line.trim().replace('[', "").replace(']', "");
+                                        let short_msg = if clean_msg.len() > 50 {
+                                            format!("{}...", &clean_msg[..47])
+                                        } else {
+                                            clean_msg
+                                        };
+                                        show_windows_toast("cli-t", &short_msg);
+                                    }
+                                }
                             }
                         }
                         Err(e) => {
