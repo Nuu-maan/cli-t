@@ -9,6 +9,9 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 
+const OFFICIAL_SERVER_IP: &str = "chat.nuu-maan.com";
+const OFFICIAL_SERVER_PORT: &str = "1111";
+
 #[derive(Deserialize, Clone)]
 struct Config {
     server: ServerConfig,
@@ -362,72 +365,77 @@ fn find_config_file() -> Option<PathBuf> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Parse command line arguments for server address override
-    let args: Vec<String> = std::env::args().collect();
-    let (config, addr) = if args.len() >= 3 && args[1] == "--server" {
-        let addr = format!("{}:{}", args[2], args.get(3).unwrap_or(&"8080".to_string()));
+    let (config, addr) = if cfg!(feature = "custom-server") {
+        // Source builds: allow config.toml and `--server` override.
+        let args: Vec<String> = std::env::args().collect();
+        if args.len() >= 3 && args[1] == "--server" {
+            let addr = format!(
+                "{}:{}",
+                args[2],
+                args.get(3)
+                    .cloned()
+                    .unwrap_or_else(|| OFFICIAL_SERVER_PORT.to_string())
+            );
+            let config = Config {
+                server: ServerConfig {
+                    ip: args[2].clone(),
+                    port: args
+                        .get(3)
+                        .cloned()
+                        .unwrap_or_else(|| OFFICIAL_SERVER_PORT.to_string()),
+                },
+                theme: ThemeConfig::default(),
+                features: FeatureConfig::default(),
+            };
+            (config, addr)
+        } else {
+            // Try config.toml, but fall back to official backend if missing.
+            let config_path = find_config_file();
+            let config_content = match config_path {
+                Some(path) => match std::fs::read_to_string(&path) {
+                    Ok(content) => Some(content),
+                    Err(e) => {
+                        eprintln!("Error reading config file {:?}: {}", path, e);
+                        None
+                    }
+                },
+                None => None,
+            };
+
+            if let Some(config_content) = config_content {
+                let config: Config = match toml::from_str(&config_content) {
+                    Ok(config) => config,
+                    Err(e) => {
+                        eprintln!("Error parsing config.toml: {}", e);
+                        return Err(e.into());
+                    }
+                };
+                let addr = format!("{}:{}", config.server.ip, config.server.port);
+                (config, addr)
+            } else {
+                let config = Config {
+                    server: ServerConfig {
+                        ip: OFFICIAL_SERVER_IP.to_string(),
+                        port: OFFICIAL_SERVER_PORT.to_string(),
+                    },
+                    theme: ThemeConfig::default(),
+                    features: FeatureConfig::default(),
+                };
+                let addr = format!("{}:{}", OFFICIAL_SERVER_IP, OFFICIAL_SERVER_PORT);
+                (config, addr)
+            }
+        }
+    } else {
+        // Release binaries: always use official backend. No config.toml required; no override flags.
         let config = Config {
             server: ServerConfig {
-                ip: args[2].clone(),
-                port: args.get(3).unwrap_or(&"8080".to_string()).clone(),
+                ip: OFFICIAL_SERVER_IP.to_string(),
+                port: OFFICIAL_SERVER_PORT.to_string(),
             },
             theme: ThemeConfig::default(),
             features: FeatureConfig::default(),
         };
-        (config, addr)
-    } else {
-        // Read config from config.toml - try multiple locations
-        let config_path = find_config_file();
-        let config_content = match config_path {
-            Some(path) => match std::fs::read_to_string(&path) {
-                Ok(content) => content,
-                Err(e) => {
-                    eprintln!("Error reading config file {:?}: {}", path, e);
-                    return Err(format!("Failed to read config file: {}", e).into());
-                }
-            },
-            None => {
-                eprintln!("Error: config.toml not found!");
-                eprintln!("Searched in:");
-                eprintln!("  - Current directory: ./config.toml");
-                if let Ok(current_dir) = std::env::current_dir() {
-                    let mut search_dir = current_dir.clone();
-                    for i in 0..5 {
-                        eprintln!("  - Parent level {}: {:?}", i, search_dir.join("config.toml"));
-                        if let Some(parent) = search_dir.parent() {
-                            search_dir = parent.to_path_buf();
-                        } else {
-                            break;
-                        }
-                    }
-                }
-                if let Ok(exe_path) = std::env::current_exe() {
-                    if let Some(exe_dir) = exe_path.parent() {
-                        eprintln!("  - Executable directory: {:?}", exe_dir.join("config.toml"));
-                    }
-                }
-                if let Some(home) = dirs::home_dir() {
-                    eprintln!("  - Home directory: {:?}", home.join("config.toml"));
-                }
-                eprintln!();
-                eprintln!("Usage: cli-t [--server <ip> [port]]");
-                eprintln!("Or create a config.toml file in one of the above locations with:");
-                eprintln!("[server]");
-                eprintln!("ip = \"your-server-ip\"");
-                eprintln!("port = \"your-server-port\"");
-                return Err("Config file not found".into());
-            }
-        };
-
-        let config: Config = match toml::from_str(&config_content) {
-            Ok(config) => config,
-            Err(e) => {
-                eprintln!("Error parsing config.toml: {}", e);
-                return Err(e.into());
-            }
-        };
-
-        let addr = format!("{}:{}", config.server.ip, config.server.port);
+        let addr = format!("{}:{}", OFFICIAL_SERVER_IP, OFFICIAL_SERVER_PORT);
         (config, addr)
     };
 
