@@ -9,7 +9,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 
-const OFFICIAL_SERVER_IP: &str = "148.251.71.9";
+const OFFICIAL_SERVER_IP: &str = "chat.nuu-maan.com";
 const OFFICIAL_SERVER_PORT: &str = "1111";
 
 #[derive(Deserialize, Clone)]
